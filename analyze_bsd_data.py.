@@ -1,0 +1,50 @@
+# analyze_bsd_data.py
+import pandas as pd
+import numpy as np
+
+def analyze_bsd_data(csv_file):
+    df = pd.read_csv(csv_file)
+    
+    print("📈 BSD DATA ANALYSIS REPORT")
+    print("=" * 60)
+    
+    # Basic stats
+    success_df = df[df['status'] == 'success']
+    print(f"Total curves: {len(df)}")
+    print(f"Successfully processed: {len(success_df)}")
+    if len(success_df) == 0:
+        return df
+    
+    print(f"Rank distribution:\n{success_df['rank'].value_counts().sort_index()}")
+    
+    # BSD ratio analysis
+    success_df['bsd_ratio_rounded'] = success_df['bsd_ratio'].round(3)
+    ratio_counts = success_df['bsd_ratio_rounded'].value_counts().head(10)
+    print(f"\nMost common BSD ratios:\n{ratio_counts}")
+    
+    # Identify anomalies
+    anomalies = success_df[(success_df['bsd_ratio'] > 1.5) | (success_df['bsd_ratio'] < 0.5)]
+    print(f"\n🚨 Anomalous curves (BSD ratio ≠ 1): {len(anomalies)}")
+    
+    for _, row in anomalies.iterrows():
+        print(f"  {row['label']}: rank={row['rank']}, ratio={row['bsd_ratio']:.3f}, L_value={row['L_value']}")
+    
+    # Rank vs Analytic rank discrepancies
+    discrepancies = success_df[success_df['rank'] != success_df['analytic_rank']]
+    print(f"\n🔍 Rank/Analytic rank discrepancies: {len(discrepancies)}")
+    
+    if len(discrepancies) > 0:
+        for _, row in discrepancies.iterrows():
+            print(f"  {row['label']}: rank={row['rank']}, analytic_rank={row['analytic_rank']}")
+    
+    # Normal curves sample
+    normal_curves = success_df[(success_df['bsd_ratio'] >= 0.9) & (success_df['bsd_ratio'] <= 1.1)]
+    print(f"\n✅ Normal curves (BSD ratio ≈ 1): {len(normal_curves)}")
+    if len(normal_curves) > 0:
+        print("Sample of normal curves:")
+        print(normal_curves[['label', 'rank', 'bsd_ratio']].head(10).to_string(index=False))
+    
+    return df
+
+if __name__ == "__main__":
+    df = analyze_bsd_data('bsd_enhanced_data_phase1.csv')
